@@ -29,6 +29,7 @@ class RipeContainerView: UIView {
         self.cardView = cardView
         
         self.cardView?.frame = cardViewFrame
+        self.initialFrame = cardView.frame
         addSubview(cardView)
     }
     
@@ -36,30 +37,40 @@ class RipeContainerView: UIView {
         super.init(coder: aDecoder)
     }
     
+    override func awakeFromNib() {
+        backgroundColor = UIColor.clear
+    }
+    
     // MARK: Public Properties
     
     var edgeSize: CGFloat = 0.25 {
         didSet {
-            
+            if edgeSize < 0.0 {
+                edgeSize = 0.0
+            } else if edgeSize > 1.0 {
+                edgeSize = 1.0
+            }
         }
     }
     
-    var requiredVelocity: CGFloat = 5.0 {
+    var requiredVelocity: CGFloat = 10.0 {
         didSet {
             if requiredVelocity < 0.0 {
                 requiredVelocity = -requiredVelocity
+            } else if requiredVelocity < velocityMin {
+                requiredVelocity = velocityMin
+            } else if requiredVelocity > velocityMax {
+                requiredVelocity = velocityMax
             }
         }
     }
     
-    var rotationAmountFactor: Double = 0.5 {
+    var rotationDegrees: CGFloat = 45.0 {
         didSet {
-            if rotationAmountFactor < 0.0 {
-                rotationAmountFactor = 0.0
-            }
-            
-            if rotationAmountFactor > 1.0 {
-                rotationAmountFactor = 1.0
+            if rotationDegrees < 0.0 {
+                rotationDegrees = 0.0
+            } else if rotationDegrees > 360.0 {
+                rotationDegrees = 360.0
             }
         }
     }
@@ -72,6 +83,7 @@ class RipeContainerView: UIView {
     
     private var cardView: RipeCardView?
     
+    private var initialFrame: CGRect?
     private var initialTouchLocation: CGPoint?
     private var lastTouchLocation: CGPoint?
     
@@ -94,13 +106,23 @@ class RipeContainerView: UIView {
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         
-        guard let currentTouchLocation = touches.first?.location(in: self) else {
+        guard let currentTouchLocation = touches.first?.location(in: self), let cardView = cardView else {
             delegate?.didReleaseSwipe(result: .cancelled)
             return
         }
         
         if let lastTouchLocation = lastTouchLocation {
             currentVelocity = currentTouchLocation.x - lastTouchLocation.x
+        }
+        
+        if let initialCenter = initialFrame?.center, let initialTouchLocation = initialTouchLocation {
+            
+            let distanceDragged = currentTouchLocation.x - initialTouchLocation.x
+            let percentComplete = distanceDragged / frame.width
+            let rotationRadians = (rotationDegrees * percentComplete).degreesToRadians
+            cardView.transform = CGAffineTransform(rotationAngle: rotationRadians)
+            
+            cardView.center.x = initialCenter.x + distanceDragged
         }
         
         lastTouchLocation = currentTouchLocation
@@ -112,6 +134,49 @@ class RipeContainerView: UIView {
             delegate?.didReleaseSwipe(result: .cancelled)
             return
         }
+        
+        if abs(cardVelocity) >= requiredVelocity {
+            animateCardOffScreen(withVelocity: cardVelocity)
+        } else {
+            animateCardReturnToCenter()
+        }
+        
+        initialTouchLocation = nil
+        
+    }
+    
+    // MARK: Animation
+    
+    private func animateCardOffScreen(withVelocity velocity: CGFloat) {
+        
+        guard let cardView = cardView else {
+            return
+        }
+        
+        let endPointX = velocity < 0.0 ? -cardView.frame.width : frame.width + cardView.frame.width
+        let rotationRadians = velocity < 0.0 ? -rotationDegrees.degreesToRadians : rotationDegrees.degreesToRadians
+        
+        UIView.animate(withDuration: 0.3, animations: {
+            cardView.center = CGPoint(x: endPointX, y: cardView.center.y)
+            cardView.transform = CGAffineTransform(rotationAngle: rotationRadians)
+        }) { (completed) in
+            
+        }
+    }
+    
+    private func animateCardReturnToCenter() {
+        
+        guard let cardView = cardView, let initialFrame = initialFrame else {
+            return
+        }
+        
+        UIView.animate(withDuration: 0.3, animations: {
+            cardView.center = initialFrame.center
+            cardView.transform = CGAffineTransform(rotationAngle: CGFloat(0.0.degreesToRadians))
+        }) { (completed) in
+            
+        }
+        
     }
 
 }

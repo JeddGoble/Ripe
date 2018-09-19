@@ -14,6 +14,7 @@
 		0419BC9721519C2600DE08C4 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0419BC9521519C2600DE08C4 /* LaunchScreen.storyboard */; };
 		0419BC9F21519CC200DE08C4 /* RipeContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0419BC9E21519CC200DE08C4 /* RipeContainerView.swift */; };
 		0419BCA121519CDA00DE08C4 /* RipeCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0419BCA021519CDA00DE08C4 /* RipeCardView.swift */; };
+		045604F42152F7C4002EE1B6 /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 045604F32152F7C4002EE1B6 /* Utilities.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 		0419BC9821519C2600DE08C4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0419BC9E21519CC200DE08C4 /* RipeContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RipeContainerView.swift; sourceTree = "<group>"; };
 		0419BCA021519CDA00DE08C4 /* RipeCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RipeCardView.swift; sourceTree = "<group>"; };
+		045604F32152F7C4002EE1B6 /* Utilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,6 +63,7 @@
 				0419BC8C21519C2500DE08C4 /* AppDelegate.swift */,
 				0419BC8E21519C2500DE08C4 /* ViewController.swift */,
 				0419BC9E21519CC200DE08C4 /* RipeContainerView.swift */,
+				045604F32152F7C4002EE1B6 /* Utilities.swift */,
 				0419BCA021519CDA00DE08C4 /* RipeCardView.swift */,
 				0419BC9021519C2500DE08C4 /* Main.storyboard */,
 				0419BC9321519C2600DE08C4 /* Assets.xcassets */,
@@ -144,6 +147,7 @@
 				0419BC8F21519C2500DE08C4 /* ViewController.swift in Sources */,
 				0419BC9F21519CC200DE08C4 /* RipeContainerView.swift in Sources */,
 				0419BCA121519CDA00DE08C4 /* RipeCardView.swift in Sources */,
+				045604F42152F7C4002EE1B6 /* Utilities.swift in Sources */,
 				0419BC8D21519C2500DE08C4 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -15,8 +15,9 @@ enum SwipeResult {
 }
 
 protocol RipeDelegate {
-    func isSwiping(percentageComplete: CGFloat)
+    func isSwiping(percentComplete: CGFloat)
     func didReleaseSwipe(result: SwipeResult)
+    func didCompleteAnimation(result: SwipeResult)
 }
 
 class RipeContainerView: UIView {
@@ -42,16 +43,6 @@ class RipeContainerView: UIView {
     }
     
     // MARK: Public Properties
-    
-    var edgeSize: CGFloat = 0.25 {
-        didSet {
-            if edgeSize < 0.0 {
-                edgeSize = 0.0
-            } else if edgeSize > 1.0 {
-                edgeSize = 1.0
-            }
-        }
-    }
     
     var requiredVelocity: CGFloat = 10.0 {
         didSet {
@@ -94,9 +85,15 @@ class RipeContainerView: UIView {
     private var velocityMax: CGFloat = 1000.0
     private var currentVelocity: CGFloat?
     
+    private var currentlyAnimating: Bool = false
+    
     // MARK: Touch Handling
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        
+        guard !currentlyAnimating else {
+            return
+        }
         
         if initialTouchLocation == nil {
             initialTouchLocation = touches.first?.location(in: self)
@@ -106,7 +103,7 @@ class RipeContainerView: UIView {
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         
-        guard let currentTouchLocation = touches.first?.location(in: self), let cardView = cardView else {
+        guard let currentTouchLocation = touches.first?.location(in: self), let cardView = cardView, !currentlyAnimating else {
             delegate?.didReleaseSwipe(result: .cancelled)
             return
         }
@@ -123,6 +120,9 @@ class RipeContainerView: UIView {
             cardView.transform = CGAffineTransform(rotationAngle: rotationRadians)
             
             cardView.center.x = initialCenter.x + distanceDragged
+            
+            cardView.updatePercentComplete(percentComplete: percentComplete)
+            delegate?.isSwiping(percentComplete: percentComplete)
         }
         
         lastTouchLocation = currentTouchLocation
@@ -130,15 +130,19 @@ class RipeContainerView: UIView {
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         
-        guard let cardVelocity = currentVelocity else {
+        guard let cardVelocity = currentVelocity, !currentlyAnimating else {
             delegate?.didReleaseSwipe(result: .cancelled)
             return
         }
         
         if abs(cardVelocity) >= requiredVelocity {
             animateCardOffScreen(withVelocity: cardVelocity)
+            
+            let result: SwipeResult = cardVelocity < 0.0 ? .left : .right
+            delegate?.didReleaseSwipe(result: result)
         } else {
             animateCardReturnToCenter()
+            delegate?.didReleaseSwipe(result: .cancelled)
         }
         
         initialTouchLocation = nil
@@ -153,14 +157,19 @@ class RipeContainerView: UIView {
             return
         }
         
+        currentlyAnimating = true
+        
+        let result: SwipeResult = velocity < 0.0 ? .left : .right
         let endPointX = velocity < 0.0 ? -cardView.frame.width : frame.width + cardView.frame.width
         let rotationRadians = velocity < 0.0 ? -rotationDegrees.degreesToRadians : rotationDegrees.degreesToRadians
         
         UIView.animate(withDuration: 0.3, animations: {
             cardView.center = CGPoint(x: endPointX, y: cardView.center.y)
             cardView.transform = CGAffineTransform(rotationAngle: rotationRadians)
+            cardView.updatePercentComplete(percentComplete: 1.0)
         }) { (completed) in
-            
+            self.currentlyAnimating = false
+            self.delegate?.didCompleteAnimation(result: result)
         }
     }
     
@@ -172,9 +181,10 @@ class RipeContainerView: UIView {
         
         UIView.animate(withDuration: 0.3, animations: {
             cardView.center = initialFrame.center
-            cardView.transform = CGAffineTransform(rotationAngle: CGFloat(0.0.degreesToRadians))
+            cardView.transform = CGAffineTransform(rotationAngle: CGFloat(0.0).degreesToRadians)
+            cardView.updatePercentComplete(percentComplete: 0.0)
         }) { (completed) in
-            
+            self.delegate?.didCompleteAnimation(result: .cancelled)
         }
         
     }

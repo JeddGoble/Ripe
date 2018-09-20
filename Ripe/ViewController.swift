@@ -13,11 +13,10 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let centerX = view.frame.width / 2.0 - 150.0
-        let cardViewFrame = CGRect(x: centerX, y: 200.0, width: 300.0, height: 400.0)
-        let cardView = RipeCardView(frame: cardViewFrame)
-        cardView.layer.cornerRadius = 30.0
-        cardView.backgroundColor = UIColor(red: 0.0, green: 0.25, blue: 0.75, alpha: 1.0)
+        let cardWidth: CGFloat = 300.0
+        let originX = view.frame.width / 2.0 - cardWidth / 2.0
+        let cardViewFrame = CGRect(x: originX, y: 200.0, width: cardWidth, height: 400.0)
+        let cardView = RipeCardView(frame: cardViewFrame, backgroundImage: UIImage(named: "dog.jpg"), overlayDisplayType: .colorOnly, shouldShowBorder: true)
         let ripeView = RipeContainerView(withFrame: view.frame, andCardView: cardView, withCardViewFrame: cardViewFrame)
         view.addSubview(ripeView)
     }

@@ -10,22 +10,15 @@ import UIKit
 
 enum OverlayDisplayType {
     case none
-    case imageOnly
-    case colorOnly
-    case imageAndColor
+    case image
+    case color
 }
 
 class RipeCardView: UIView {
 
     // MARK: Public Properties
     
-    var backgroundImageView: UIImageView?
-    var shouldShowBorder: Bool = true
-    var overlayDisplayType: OverlayDisplayType = .colorOnly
-    var leftColor: UIColor? = .red
-    var rightColor: UIColor? = .green
-    var leftImage: UIImage?
-    var rightImage: UIImage?
+    var configuration: RipeCardConfiguration = RipeCardConfiguration.zero
     
     // MARK: Read-Only Properties
     
@@ -33,17 +26,24 @@ class RipeCardView: UIView {
     
     // MARK: Private Properties
     
+    private weak var parentView: RipeContainerView?
+    private var backgroundImageView: UIImageView?
     private var overlayImageView: UIImageView?
     
     // MARK: Initialization
     
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    required init(configuration: RipeCardConfiguration) {
         
-        setup(frame: frame)
+        let cardViewFrame = CGRect(origin: .zero, size: configuration.size)
+        super.init(frame: cardViewFrame)
+        
+        setup(withConfiguration: configuration)
     }
     
-    private func setup(frame: CGRect) {
+    private func setup(withConfiguration configuration: RipeCardConfiguration) {
+        
+        self.configuration = configuration
+        
         backgroundColor = UIColor.white
         layer.cornerRadius = 30.0
         clipsToBounds = true
@@ -51,43 +51,30 @@ class RipeCardView: UIView {
         let backgroundImageView = UIImageView(frame: frame)
         backgroundImageView.frame.origin = CGPoint(x: 0.0, y: 0.0)
         backgroundImageView.backgroundColor = .clear
+        backgroundImageView.contentMode = .scaleAspectFill
+        backgroundImageView.image = configuration.backgroundImage
         addSubview(backgroundImageView)
         sendSubview(toBack: backgroundImageView)
-        self.backgroundImageView = backgroundImageView
         
         let overlay = UIImageView(frame: frame)
         overlay.frame.origin = CGPoint(x: 0.0, y: 0.0)
         overlay.backgroundColor = .clear
-        overlay.tintColor = .clear
         addSubview(overlay)
         bringSubview(toFront: overlay)
         overlay.isUserInteractionEnabled = false
         self.overlayImageView = overlay
         
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-    }
-    
-    convenience init(frame: CGRect, backgroundImage: UIImage? = nil, cornerRadius: CGFloat = 30.0, overlayDisplayType: OverlayDisplayType = .colorOnly, leftColor: UIColor? = .red, rightColor: UIColor? = .green, leftImage: UIImage? = nil, rightImage: UIImage? = nil, shouldShowBorder: Bool = true) {
-        self.init(frame: frame)
-        
-        self.overlayDisplayType = overlayDisplayType
-        self.leftColor = leftColor
-        self.rightColor = rightColor
-        self.leftImage = leftImage
-        self.rightImage = rightImage
-        
-        backgroundImageView?.image = backgroundImage
-        
-        if shouldShowBorder {
+        if configuration.shouldShowBorder == true {
             layer.borderColor = UIColor.black.cgColor
-            layer.borderWidth = 5.0
+            layer.borderWidth = configuration.borderWidth
         } else {
             layer.borderColor = UIColor.clear.cgColor
             layer.borderWidth = 0.0
         }
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
     }
     
     // MARK: Update Card Functions
@@ -100,16 +87,15 @@ class RipeCardView: UIView {
     
     private func updateOverlay(percentComplete: CGFloat) {
         
-        switch overlayDisplayType {
+        switch configuration.overlayDisplayType {
         case .none:
+            if let overlay = overlayImageView { overlay.isHidden = true }
             break
-        case .imageOnly:
+        case .image:
             updateOverlayImage(percentComplete: percentComplete)
-        case .colorOnly:
+        case .color:
             overlayImageView?.image = nil
             updateOverlayColor(percentComplete: percentComplete)
-        case .imageAndColor:
-            updateOverlayImage(percentComplete: percentComplete, leftTintColor: leftColor, rightTintColor: rightColor)
         }
     }
     
@@ -120,21 +106,16 @@ class RipeCardView: UIView {
         }
         
         overlay.backgroundColor = .clear
+        overlay.isHidden = false
         
-        if let leftImage = leftImage, percentComplete < 0.0 {
+        if let leftImage = configuration.leftImage, percentComplete < 0.0 {
             overlay.image = leftImage
             overlay.layer.opacity = Float(abs(percentComplete))
             
-            if let leftTintColor = leftTintColor {
-                overlay.tintColor = leftTintColor
-            }
-        } else if let rightImage = rightImage, percentComplete > 0.0 {
+        } else if let rightImage = configuration.rightImage, percentComplete > 0.0 {
             overlay.image = rightImage
             overlay.layer.opacity = Float(abs(percentComplete))
             
-            if let rightTintColor = rightTintColor {
-                overlay.tintColor = rightTintColor
-            }
         } else {
             overlay.image = nil
             overlay.layer.opacity = 0.0
@@ -148,11 +129,14 @@ class RipeCardView: UIView {
             return
         }
         
+        overlay.image = nil
+        overlay.isHidden = false
+        
         if percentComplete < 0.0 {
-            overlay.backgroundColor = leftColor
+            overlay.backgroundColor = configuration.leftColor
             overlay.layer.opacity = Float(abs(percentComplete))
         } else if percentComplete > 0.0 {
-            overlay.backgroundColor = rightColor
+            overlay.backgroundColor = configuration.rightColor
             overlay.layer.opacity = Float(abs(percentComplete))
         } else {
             overlay.backgroundColor = .clear
@@ -161,44 +145,3 @@ class RipeCardView: UIView {
     }
     
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

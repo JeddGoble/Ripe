@@ -14,6 +14,12 @@ enum SwipeResult {
     case cancelled
 }
 
+protocol RipeDataSource {
+    func nibNameForCardView() -> String
+    func nextCard(forNumberOfCardsShown cardsShown: Int) -> RipeCardView
+    func numberOfCardsToQueue() -> Int
+}
+
 protocol RipeDelegate {
     func isSwiping(percentComplete: CGFloat)
     func didReleaseSwipe(result: SwipeResult)
@@ -22,21 +28,7 @@ protocol RipeDelegate {
 
 class RipeContainerView: UIView {
 
-    // MARK: Initialization
-    
-    required init(withFrame frame: CGRect, andCardView cardView: RipeCardView, withCardViewFrame cardViewFrame: CGRect) {
-        super.init(frame: frame)
-        
-        self.cardView = cardView
-        
-        self.cardView?.frame = cardViewFrame
-        self.initialFrame = cardView.frame
-        addSubview(cardView)
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-    }
+    // MARK: Awake
     
     override func awakeFromNib() {
         backgroundColor = UIColor.clear
@@ -66,15 +58,24 @@ class RipeContainerView: UIView {
         }
     }
     
-    // MARK: Delegate
+    // MARK: Delegate & Data Source
     
     var delegate: RipeDelegate?
+    var dataSource: RipeDataSource? {
+        didSet {
+            if let dataSource = dataSource {
+                registerCard(named: dataSource.nibNameForCardView())
+                retrieveNewCard()
+            }
+        }
+    }
     
     // MARK: Private Properties
     
-    private var cardView: RipeCardView?
+    private var topCard: RipeCardView?
+    private var queuedCards: [RipeCardView] = []
+    private var numberOfCardsShownThisSession: Int = 0
     
-    private var initialFrame: CGRect?
     private var initialTouchLocation: CGPoint?
     private var lastTouchLocation: CGPoint?
     
@@ -103,7 +104,7 @@ class RipeContainerView: UIView {
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         
-        guard let currentTouchLocation = touches.first?.location(in: self), let cardView = cardView, !currentlyAnimating else {
+        guard let currentTouchLocation = touches.first?.location(in: self), let cardView = topCard, !currentlyAnimating else {
             delegate?.didReleaseSwipe(result: .cancelled)
             return
         }
@@ -112,8 +113,10 @@ class RipeContainerView: UIView {
             currentVelocity = currentTouchLocation.x - lastTouchLocation.x
         }
         
-        if let initialCenter = initialFrame?.center, let initialTouchLocation = initialTouchLocation {
+        
+        if let initialTouchLocation = initialTouchLocation {
             
+            let initialCenter = calculateFrameForCard(configuration: cardView.configuration).center
             let distanceDragged = currentTouchLocation.x - initialTouchLocation.x
             let percentComplete = distanceDragged / frame.width
             let rotationRadians = (rotationDegrees * percentComplete).degreesToRadians
@@ -149,11 +152,41 @@ class RipeContainerView: UIView {
         
     }
     
+    // MARK: Card Retrieval from Data Source
+    
+    private func registerCard(named name: String) {
+        
+        // TODO
+    }
+    
+    private func retrieveNewCard() {
+        
+        guard let dataSource = dataSource else {
+            return
+        }
+        
+        let numberOfCardsToQueue = dataSource.numberOfCardsToQueue()
+        
+        for i in 0..<numberOfCardsToQueue {
+            
+            let ripeCardView = dataSource.nextCard(forNumberOfCardsShown: numberOfCardsShownThisSession + i)
+            ripeCardView.frame = calculateFrameForCard(configuration: ripeCardView.configuration)
+            addSubview(ripeCardView)
+            sendSubview(toBack: ripeCardView)
+            
+            if i == 0 {
+                topCard = ripeCardView
+            }
+            
+            queuedCards.append(ripeCardView)
+        }
+    }
+    
     // MARK: Animation
     
     private func animateCardOffScreen(withVelocity velocity: CGFloat) {
         
-        guard let cardView = cardView else {
+        guard let cardView = topCard else {
             return
         }
         
@@ -168,6 +201,12 @@ class RipeContainerView: UIView {
             cardView.transform = CGAffineTransform(rotationAngle: rotationRadians)
             cardView.updatePercentComplete(percentComplete: 1.0)
         }) { (completed) in
+            self.numberOfCardsShownThisSession += 1
+            
+            if self.queuedCards.count > self.numberOfCardsShownThisSession {
+                self.topCard = self.queuedCards[self.numberOfCardsShownThisSession]
+            }
+            
             self.currentlyAnimating = false
             self.delegate?.didCompleteAnimation(result: result)
         }
@@ -175,9 +214,11 @@ class RipeContainerView: UIView {
     
     private func animateCardReturnToCenter() {
         
-        guard let cardView = cardView, let initialFrame = initialFrame else {
+        guard let cardView = topCard else {
             return
         }
+        
+        let initialFrame = calculateFrameForCard(configuration: cardView.configuration)
         
         UIView.animate(withDuration: 0.3, animations: {
             cardView.center = initialFrame.center
@@ -187,6 +228,16 @@ class RipeContainerView: UIView {
             self.delegate?.didCompleteAnimation(result: .cancelled)
         }
         
+    }
+    
+    // MARK: Helper Methods
+    
+    private func calculateFrameForCard(configuration: RipeCardConfiguration) -> CGRect {
+        let originX = frame.width / 2.0 - configuration.size.width / 2.0
+        let originY = frame.height / 2.0 - configuration.size.height / 2.0
+        let cardViewFrame = CGRect(x: originX, y: originY, width: configuration.size.width, height: configuration.size.height)
+        
+        return cardViewFrame
     }
 
 }
